@@ -4,7 +4,7 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
-#include <llvm/Support/CommandLine.h>
+//#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   atexit(llvm_shutdown);
 
   // Parse -debug and -debug-only options.
-  cl::ParseCommandLineOptions(argc, argv, "JitFromScratch example project\n");
+  //cl::ParseCommandLineOptions(argc, argv, "JitFromScratch example project\n");
 
   // Implementation of the integerDistances function.
   std::string sourceCode =

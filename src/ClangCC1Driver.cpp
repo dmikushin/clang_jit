@@ -1,7 +1,7 @@
 #include "ClangCC1Driver.h"
 
 // Hack: cc1 lives in "tools" next to "include"
-#include <../tools/driver/cc1_main.cpp>
+#include "cc1_main.cpp"
 
 #if _WIN32
 #include "ClangCC1Args_Win.h"
@@ -40,7 +40,7 @@ llvm::Expected<std::string> saveSourceFile(std::string content) {
   llvm::raw_fd_ostream os(fd, shouldClose, unbuffered);
   os << content;
 
-  return name.str();
+  return name.str().str();
 }
 
 std::string replaceExtension(llvm::StringRef name, llvm::StringRef ext) {
@@ -48,13 +48,6 @@ std::string replaceExtension(llvm::StringRef name, llvm::StringRef ext) {
 }
 
 llvm::Error compileCppToBitcodeFile(std::vector<std::string> args) {
-  DEBUG({
-    llvm::dbgs() << "Invoke Clang cc1 with args:\n";
-    for (std::string arg : args)
-      llvm::dbgs() << arg << " ";
-    llvm::dbgs() << "\n\n";
-  });
-
   std::vector<const char *> argsX;
   std::transform(args.begin(), args.end(), std::back_inserter(argsX),
                  [](const std::string &s) { return s.c_str(); });

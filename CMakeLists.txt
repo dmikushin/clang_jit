@@ -16,11 +16,10 @@ else()
 endif()
 
 add_executable(JitFromScratch
-    JitFromScratch.cpp
-    SimpleOrcJit.h
-    ClangCC1Driver.cpp
-    ClangCC1Driver.h
-    ClangCC1Args_${OS_NAME}.h)
+    src/JitFromScratch.cpp
+    src/ClangCC1Driver.cpp
+    include/ClangCC1Driver.h
+    include/ClangCC1Args_${OS_NAME}.h)
 
 set_target_properties(JitFromScratch PROPERTIES
     CXX_STANDARD 14
@@ -41,7 +40,7 @@ if(USE_LLD)
 endif()
 
 target_include_directories(JitFromScratch PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${LLVM_INCLUDE_DIRS}
     ${CLANG_INCLUDE_DIRS})
 
@@ -69,67 +68,9 @@ target_compile_definitions(JitFromScratch
 )
 
 # Clang dependencies
-target_link_libraries(JitFromScratch PRIVATE
-    LLVMX86CodeGen
-    LLVMX86AsmPrinter
-    LLVMX86AsmParser
-    LLVMX86Desc
-    LLVMX86Info
-    LLVMX86Disassembler
-    LLVMAnalysis
-    LLVMCodeGen
-    LLVMCore
-    LLVMipo
-    LLVMInstCombine
-    LLVMInstrumentation
-    LLVMMC
-    LLVMMCParser
-    LLVMObjCARCOpts
-    LLVMOption
-    LLVMScalarOpts
-    LLVMSupport
-    LLVMTransformUtils
-    LLVMVectorize
-    clangBasic
-    clangCodeGen
-    clangDriver
-    clangFrontend
-    clangFrontendTool
-    LLVMAsmPrinter
-    LLVMDebugInfoCodeView
-    LLVMDebugInfoMSF
-    LLVMGlobalISel
-    LLVMSelectionDAG
-    LLVMX86Utils
-    LLVMMCDisassembler
-    LLVMCoroutines
-    LLVMCoverage
-    LLVMLTO
-    LLVMPasses
-    LLVMTarget
-    LLVMBitWriter
-    LLVMIRReader
-    LLVMAsmParser
-    LLVMLinker
-    LLVMObject
-    clangRewriteFrontend
-    clangARCMigrate
-    clangStaticAnalyzerFrontend
-    LLVMProfileData
-    clangParse
-    clangSerialization
-    LLVMBitReader
-    clangSema
-    clangEdit
-    clangStaticAnalyzerCheckers
-    clangASTMatchers
-    clangStaticAnalyzerCore
-    clangAnalysis
-    clangAST
-    clangRewrite
-    clangLex
-    LLVMDemangle
-)
+target_link_libraries(JitFromScratch PRIVATE ${LLVM_LIBRARIES} clangTooling clangToolingCore clangDriver clangFrontend
+    clangFrontendTool clangParse clangSema clangEdit clangLex clangAnalysis clangRewrite clangRewriteFrontend
+    clangSerialization clangAST clangASTMatchers clangDynamicASTMatchers clangBasic clangIndex)
 
 message("")
 message("JitFromScratch")
