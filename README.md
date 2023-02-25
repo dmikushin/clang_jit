@@ -1,45 +1,44 @@
-# JitFromScratch / llvm50/ jit-from-source / cpp-clang
+# Compile C++ code in runtime with Clang
 
-**This is the LLVM 5.0 compatible version of the examples. Please find the latest version [here](https://github.com/weliveindetail/JitFromScratch).**
+Compile C++ code in runtime with Clang, using the Clang cc1 frontend tool. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in the blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
 
-This branch shows a simple way to compile C++ code at runtime using the Clang cc1 frontend tool. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in my blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
-
-The example uses almost the same code as was the basis for the [`jit-basics`](https://github.com/weliveindetail/JitFromScratch/tree/llvm50/jit-basics) branch:
+## Building
 
 ```
-// Implementation of the integerDistances function.
-std::string sourceCode =
-    "extern \"C\" int abs(int);                                           \n"
-    "extern int *customIntAllocator(unsigned items);                      \n"
-    "                                                                     \n"
-    "extern \"C\" int *integerDistances(int* x, int *y, unsigned items) { \n"
-    "  int *results = customIntAllocator(items);                          \n"
-    "                                                                     \n"
-    "  for (int i = 0; i < items; i++) {                                  \n"
-    "    results[i] = abs(x[i] - y[i]);                                   \n"
-    "  }                                                                  \n"
-    "                                                                     \n"
-    "  return results;                                                    \n"
-    "}                                                                    \n";
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-## Build and Run
-
-Tested on Linux Mint 18, Mac OS X 10.12 and Windows 10. For detailed instructions please refer to [Building a JIT from scratch](https://weliveindetail.github.io/blog/post/2017/07/18/building-a-jit-from-scratch.html).
+## Testing
 
 ```
-$ cmake -DLLVM_DIR=/path/to/build-llvm50/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Debug ../JitFromScratch
-$ cmake --build .
-$ ./JitFromScratch -debug -debug-only=cc1driver
-Invoke Clang cc1 with args:
--emit-llvm -emit-llvm-bc -emit-llvm-uselists -main-file-name 
-/var/folders/n7/wxcpxmvd1yx5pld9wr8tp1dm0000gn/T/JitFromScratch-90fb6c.cpp
--std=c++14 -disable-free -stack-protector 1 -fmax-type-align=16 -mrelocation-model 
-pic -pic-level 2 -mthread-model posix -mdisable-fp-elim -masm-verbose -munwind-tables 
--dwarf-column-info -debugger-tuning=lldb -debug-info-kind=standalone -dwarf-version=4 
--stdlib=libc++ -resource-dir ~/Develop/llvm50/build-llvm50-clang/lib/clang/5.0.1
--o /var/folders/n7/wxcpxmvd1yx5pld9wr8tp1dm0000gn/T/JitFromScratch-90fb6c.bc 
--x c++ /var/folders/n7/wxcpxmvd1yx5pld9wr8tp1dm0000gn/T/JitFromScratch-90fb6c.cpp 
+./test_clang_cc1_jit
 
-Integer Distances: 3, 0, 3
+Compiling the following source code in runtime:
+
+extern "C" int abs(int);
+extern int *customIntAllocator(unsigned items);
+
+extern "C" int *integerDistances(int* x, int *y, unsigned items) {
+  int *results = customIntAllocator(items);
+
+  for (int i = 0; i < items; i++) {
+    results[i] = abs(x[i] - y[i]);
+  }
+
+  return results;
+}
+
+; ModuleID = '/tmp/JitFromScratch-744ca5.bc'
+source_filename = "/tmp/JitFromScratch-744ca5.cpp"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+; Function Attrs: noinline nounwind optnone uwtable mustprogress
+define dso_local i32* @integerDistances(i32* %x, i32* %y, i32 %items) #0 !dbg !7 {
+entry:
+...
 ```
+
