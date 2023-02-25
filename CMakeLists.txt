@@ -51,3 +51,7 @@ add_executable(test_${PROJECT_NAME} src/test/test_${PROJECT_NAME}.cpp)
 target_compile_definitions(test_${PROJECT_NAME} PRIVATE ${LLVM_DEFINITIONS})
 target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME})
 
+add_executable(test_${PROJECT_NAME}2 src/test/test_${PROJECT_NAME}2.cpp)
+target_compile_definitions(test_${PROJECT_NAME}2 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}2 ${PROJECT_NAME})
+

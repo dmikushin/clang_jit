@@ -3,15 +3,17 @@
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
 
+using namespace llvm;
+
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fatalError(llvm::Error E)
+LLVM_ATTRIBUTE_NORETURN static void fatalError(Error E)
 {
-	llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI)
+	handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI)
 	{
-		llvm::errs() << "Fatal Error: ";
-		EI.log(llvm::errs());
-		llvm::errs() << "\n";
-		llvm::errs().flush();
+		errs() << "Fatal Error: ";
+		EI.log(errs());
+		errs() << "\n";
+		errs().flush();
 	});
 
 	exit(1);
@@ -34,8 +36,6 @@ static std::string sourceCode =
 
 int main(int argc, char **argv)
 {
-	using namespace llvm;
-
 	outs() << "Compiling the following source code in runtime:" << "\n" << sourceCode << "\n";
 
 	// Compile C++ source code to LLVM IR module.
