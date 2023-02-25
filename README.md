@@ -2,6 +2,8 @@
 
 Compile C++ code in runtime with Clang, using the Clang cc1 frontend tool. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in the blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
 
+This project is tested to work with LLVM 12.
+
 ## Building
 
 ```
