@@ -21,17 +21,18 @@ std::vector<std::string> getClangCC1Args(llvm::StringRef cpp,
   args.push_back("-disable-free");
   args.push_back("-fdeprecated-macro");
   args.push_back("-fmath-errno");
-  args.push_back("-fuse-init-array");
+  // Now it is implicitly the default, there is only -fno-use-init-array
+  //args.push_back("-fuse-init-array");
 
   args.push_back("-mrelocation-model");
   args.push_back("static");
   args.push_back("-mthread-model");
   args.push_back("posix");
-  args.push_back("-masm-verbose");
+  //args.push_back("-masm-verbose");
   args.push_back("-mconstructor-aliases");
   args.push_back("-munwind-tables");
 
-  args.push_back("-dwarf-column-info");
+  //args.push_back("-dwarf-column-info");
   args.push_back("-debugger-tuning=gdb");
 
 #if NDEBUG
