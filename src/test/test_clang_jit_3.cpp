@@ -1,14 +1,51 @@
-#include "ClangCC1Driver.h"
+#include "ClangDriver.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 using namespace llvm;
 using namespace orc;
+
+// A function object that creates a simple pass pipeline to apply to each
+// module as it passes through the IRTransformLayer.
+class SimpleOptimizer
+{
+	llvm::PassManagerBuilder B;
+  
+public :
+
+	SimpleOptimizer(unsigned OptLevel = 3) { B.OptLevel = OptLevel; }
+
+	Expected<ThreadSafeModule> operator()(ThreadSafeModule TSM, MaterializationResponsibility &R)
+	{
+		TSM.withModuleDo([this](Module &M)
+		{
+			dbgs() << "--- BEFORE OPTIMIZATION ---\n" << M << "\n";
+    
+			legacy::FunctionPassManager FPM(&M);
+			B.populateFunctionPassManager(FPM);
+
+			FPM.doInitialization();
+			for (Function &F : M)
+				FPM.run(F);
+			FPM.doFinalization();
+
+			legacy::PassManager MPM;
+			B.populateModulePassManager(MPM);
+			MPM.run(M);    
+
+			dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
+		});
+
+		return std::move(TSM);
+	}
+};
 
 // Show the error message and exit.
 LLVM_ATTRIBUTE_NORETURN static void fatalError(Error E)
@@ -77,12 +114,16 @@ int main(int argc, char *argv[])
 
 	// Compile C++ source code to LLVM IR module.
 	auto C = std::make_unique<LLVMContext>();
-	ClangCC1Driver driver;
+	ClangDriver driver;
 	auto M = driver.compileTranslationUnit(sourceCode, *C);
 	if (!M)
 		fatalError(M.takeError());
 
 	auto J = ExitOnErr(LLJITBuilder().create());
+
+	// Install transform to optimize modules when they're materialized.
+	J->getIRTransformLayer().setTransform(SimpleOptimizer());
+
 	JITDylib &JD = J->getMainJITDylib();
 	JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(J->getDataLayout().getGlobalPrefix())));
 	ExitOnErr(J->addIRModule(JD, ThreadSafeModule(std::move(M.get()), std::move(C))));

@@ -1,4 +1,4 @@
-#include "ClangCC1Driver.h"
+#include "ClangDriver.h"
 
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
 	// Compile C++ source code to LLVM IR module.
 	LLVMContext context;
-	ClangCC1Driver driver;
+	ClangDriver driver;
 	auto m = driver.compileTranslationUnit(sourceCode, context);
 	if (!m)
 		fatalError(m.takeError());

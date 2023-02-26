@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(clang_jit_cc1 VERSION 1.0 LANGUAGES CXX)
+project(clang_jit VERSION 1.0 LANGUAGES CXX)
 
 if(WIN32)
     set(OS_NAME "Win")
@@ -19,9 +19,8 @@ find_package(LLVM CONFIG REQUIRED PATHS "/usr/lib/llvm-12/lib/cmake" NO_DEFAULT_
 find_package(Clang CONFIG REQUIRED PATHS "/usr/lib/llvm-12/lib/cmake" NO_DEFAULT_PATH)
 
 add_library(${PROJECT_NAME} SHARED
-    src/ClangCC1Driver.cpp
-    include/ClangCC1Driver.h
-    include/ClangCC1Args_${OS_NAME}.h)
+    src/ClangDriver.cpp
+    include/ClangDriver.h)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 14
