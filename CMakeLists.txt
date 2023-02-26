@@ -47,11 +47,15 @@ target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARIES} clangTooling clangToolin
     clangFrontendTool clangParse clangSema clangEdit clangLex clangAnalysis clangRewrite clangRewriteFrontend
     clangSerialization clangAST clangASTMatchers clangDynamicASTMatchers clangBasic clangIndex)
 
-add_executable(test_${PROJECT_NAME} src/test/test_${PROJECT_NAME}.cpp)
-target_compile_definitions(test_${PROJECT_NAME} PRIVATE ${LLVM_DEFINITIONS})
-target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME})
+add_executable(test_${PROJECT_NAME}1 src/test/test_${PROJECT_NAME}1.cpp)
+target_compile_definitions(test_${PROJECT_NAME}1 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}1 ${PROJECT_NAME})
 
 add_executable(test_${PROJECT_NAME}2 src/test/test_${PROJECT_NAME}2.cpp)
 target_compile_definitions(test_${PROJECT_NAME}2 PRIVATE ${LLVM_DEFINITIONS})
 target_link_libraries(test_${PROJECT_NAME}2 ${PROJECT_NAME})
+
+add_executable(test_${PROJECT_NAME}3 src/test/test_${PROJECT_NAME}3.cpp)
+target_compile_definitions(test_${PROJECT_NAME}3 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}3 ${PROJECT_NAME})
 
