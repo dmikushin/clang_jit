@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(clang_cc1_jit VERSION 1.0 LANGUAGES CXX)
+project(clang_jit_cc1 VERSION 1.0 LANGUAGES CXX)
 
 if(WIN32)
     set(OS_NAME "Win")
@@ -47,15 +47,15 @@ target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARIES} clangTooling clangToolin
     clangFrontendTool clangParse clangSema clangEdit clangLex clangAnalysis clangRewrite clangRewriteFrontend
     clangSerialization clangAST clangASTMatchers clangDynamicASTMatchers clangBasic clangIndex)
 
-add_executable(test_${PROJECT_NAME}1 src/test/test_${PROJECT_NAME}1.cpp)
-target_compile_definitions(test_${PROJECT_NAME}1 PRIVATE ${LLVM_DEFINITIONS})
-target_link_libraries(test_${PROJECT_NAME}1 ${PROJECT_NAME})
+add_executable(test_${PROJECT_NAME}_1 src/test/test_${PROJECT_NAME}_1.cpp)
+target_compile_definitions(test_${PROJECT_NAME}_1 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}_1 ${PROJECT_NAME})
 
-add_executable(test_${PROJECT_NAME}2 src/test/test_${PROJECT_NAME}2.cpp)
-target_compile_definitions(test_${PROJECT_NAME}2 PRIVATE ${LLVM_DEFINITIONS})
-target_link_libraries(test_${PROJECT_NAME}2 ${PROJECT_NAME})
+add_executable(test_${PROJECT_NAME}_2 src/test/test_${PROJECT_NAME}_2.cpp)
+target_compile_definitions(test_${PROJECT_NAME}_2 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}_2 ${PROJECT_NAME})
 
-add_executable(test_${PROJECT_NAME}3 src/test/test_${PROJECT_NAME}3.cpp)
-target_compile_definitions(test_${PROJECT_NAME}3 PRIVATE ${LLVM_DEFINITIONS})
-target_link_libraries(test_${PROJECT_NAME}3 ${PROJECT_NAME})
+add_executable(test_${PROJECT_NAME}_3 src/test/test_${PROJECT_NAME}_3.cpp)
+target_compile_definitions(test_${PROJECT_NAME}_3 PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(test_${PROJECT_NAME}_3 ${PROJECT_NAME})
 

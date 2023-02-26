@@ -1,8 +1,8 @@
 # Compile C++ code in runtime with Clang
 
-Compile C++ code in runtime with Clang, using the Clang cc1 frontend tool. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in the blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
+Compile C++ code in runtime with Clang, using the Clang cc1 entry point. Clang is linked into the executable statically and invoked via `cc1_main`. Please find a detailed description in the blog post [The simplest way to compile C++ with Clang at runtime](http://weliveindetail.github.io/blog/post/2017/07/25/compile-with-clang-at-runtime-simple.html).
 
-This project is tested to work with LLVM 12.
+This project is a fork of [author's original repository](https://github.com/weliveindetail/JitFromScratch), updated and tested to work with LLVM 12.
 
 ## Building
 
@@ -18,7 +18,7 @@ make
 The first test simply compiles the provided source code into LLVM IR, and prints it:
 
 ```
-./test_clang_cc1_jit
+./test_clang_jit_cc1_1
 
 Compiling the following source code in runtime:
 
@@ -49,7 +49,7 @@ entry:
 The second test links the JIT-compiled against dependencies provided by the main executable, and runs it:
 
 ```
-./test_clang_cc1_jit2
+./test_clang_jit_cc1_2
 
 Compiling the following source code in runtime:
 extern "C" int abs(int);
@@ -68,3 +68,4 @@ extern "C" int *integerDistances(int* x, int *y, unsigned items) {
 Integer Distances: 3, 0, 3
 ```
 
+The third test does the same, plus an IR optimization pass.
