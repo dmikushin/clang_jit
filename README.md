@@ -15,6 +15,8 @@ make
 
 ## Testing
 
+The first test simply compiles the provided source code into LLVM IR, and prints it:
+
 ```
 ./test_clang_cc1_jit
 
@@ -42,5 +44,27 @@ target triple = "x86_64-pc-linux-gnu"
 define dso_local i32* @integerDistances(i32* %x, i32* %y, i32 %items) #0 !dbg !7 {
 entry:
 ...
+```
+
+The second test links the JIT-compiled against dependencies provided by the main executable, and runs it:
+
+```
+./test_clang_cc1_jit2
+
+Compiling the following source code in runtime:
+extern "C" int abs(int);
+extern int *customIntAllocator(unsigned items);
+
+extern "C" int *integerDistances(int* x, int *y, unsigned items) {
+  int *results = customIntAllocator(items);
+
+  for (int i = 0; i < items; i++) {
+    results[i] = abs(x[i] - y[i]);
+  }
+
+  return results;
+}
+
+Integer Distances: 3, 0, 3
 ```
 

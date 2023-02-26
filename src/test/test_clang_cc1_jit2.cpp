@@ -1,6 +1,7 @@
 #include "ClangCC1Driver.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,7 +50,7 @@ constexpr unsigned arrayElements(T (&)[sizeOfArray])
 }
  
 // This function will be called from JITed code.
-extern "C" int *customIntAllocator(unsigned items)
+int *customIntAllocator(unsigned items)
 {
 	static int memory[100];
 	static unsigned allocIdx = 0;
@@ -82,10 +83,25 @@ int main(int argc, char *argv[])
 	if (!M)
 		fatalError(M.takeError());
 
-	// Create an LLJIT instance with an ObjectLinkingLayer as the base layer.
-	auto J = ExitOnErr(LLJITBuilder().create());
+  auto J = ExitOnErr(
+      LLJITBuilder()
+          .setObjectLinkingLayerCreator(
+              [&](ExecutionSession &ES, const Triple &TT) {
+                // Create ObjectLinkingLayer.
+                auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
+                    ES, std::make_unique<jitlink::InProcessMemoryManager>());
+                return ObjLinkingLayer;
+              })
+          .create());
 
-	ExitOnErr(J->addIRModule(ThreadSafeModule(std::move(M.get()), std::move(C))));
+	JITDylib &JD = J->getMainJITDylib();
+	JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(J->getDataLayout().getGlobalPrefix())));
+#if 0
+	MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
+	auto s = absoluteSymbols({{ Mangle("customIntAllocator"), JITEvaluatedSymbol(pointerToJITTargetAddress(&customIntAllocator), JITSymbolFlags::Exported)}});
+	ExitOnErr(JD.define(s));
+#endif
+	ExitOnErr(J->addIRModule(JD, ThreadSafeModule(std::move(M.get()), std::move(C))));
 
 	// Look up the JIT'd function, cast it to a function pointer, then call it.
 	auto sym = ExitOnErr(J->lookup("integerDistances"));

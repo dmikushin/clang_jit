@@ -53,5 +53,6 @@ target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME})
 
 add_executable(test_${PROJECT_NAME}2 src/test/test_${PROJECT_NAME}2.cpp)
 target_compile_definitions(test_${PROJECT_NAME}2 PRIVATE ${LLVM_DEFINITIONS})
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,-export-dynamic")
 target_link_libraries(test_${PROJECT_NAME}2 ${PROJECT_NAME})
 
