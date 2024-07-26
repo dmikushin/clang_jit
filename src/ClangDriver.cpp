@@ -5,19 +5,19 @@
 // https://wiki.nervtech.org/doku.php?id=blog:2020:0410_dynamic_cpp_compilation
 // https://stackoverflow.com/questions/34828480/generate-assembly-from-c-code-in-memory-using-libclang
 
-#include <llvm/InitializePasses.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/InitializePasses.h>
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/TargetParser/Host.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/TargetParser/Host.h>
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
@@ -27,8 +27,10 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 
-#include <clang/Basic/DiagnosticOptions.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/ASTContext.h>
 #include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/DiagnosticOptions.h>
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/FileSystemOptions.h>
 #include <clang/Basic/LangOptions.h>
@@ -44,89 +46,92 @@
 #include <clang/Lex/PreprocessorOptions.h>
 #include <clang/Parse/ParseAST.h>
 #include <clang/Sema/Sema.h>
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/ASTConsumer.h>
 
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <unistd.h>
 #include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <unistd.h>
 
 #define VERBOSE
 
 llvm::Expected<std::unique_ptr<llvm::Module>>
-ClangDriver::compileTranslationUnit(std::string cppCode, llvm::LLVMContext &context)
-{
-    clang::CompilerInstance compilerInstance;
-    auto& compilerInvocation = compilerInstance.getInvocation();
+ClangDriver::compileTranslationUnit(std::string cppCode,
+                                    llvm::LLVMContext &context) {
+  clang::CompilerInstance compilerInstance;
+  auto &compilerInvocation = compilerInstance.getInvocation();
 
-    clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts = new clang::DiagnosticOptions;
-    clang::TextDiagnosticPrinter *textDiagPrinter =
-            new clang::TextDiagnosticPrinter(llvm::outs(), &*DiagOpts);
+  clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts =
+      new clang::DiagnosticOptions;
+  clang::TextDiagnosticPrinter *textDiagPrinter =
+      new clang::TextDiagnosticPrinter(llvm::outs(), &*DiagOpts);
 
-    clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> pDiagIDs;
+  clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> pDiagIDs;
 
-    clang::DiagnosticsEngine *pDiagnosticsEngine =
-            new clang::DiagnosticsEngine(pDiagIDs, &*DiagOpts, textDiagPrinter);
+  clang::DiagnosticsEngine *pDiagnosticsEngine =
+      new clang::DiagnosticsEngine(pDiagIDs, &*DiagOpts, textDiagPrinter);
 
-    std::stringstream ss;
-    ss << "-triple=" << llvm::sys::getDefaultTargetTriple();
-    
-    std::istream_iterator<std::string> begin(ss);
-    std::istream_iterator<std::string> end;
-    std::istream_iterator<std::string> i = begin;
-    std::vector<const char*> itemcstrs;
-    std::vector<std::string> itemstrs;
-    while(i != end) {
-        itemstrs.push_back(*i);
-        ++i;
-    }
+  std::stringstream ss;
+  ss << "-triple=" << llvm::sys::getDefaultTargetTriple();
 
-    for (unsigned idx = 0; idx < itemstrs.size(); idx++) {
-        // note: if itemstrs is modified after this, itemcstrs will be full
-        // of invalid pointers! Could make copies, but would have to clean up then...
-        itemcstrs.push_back(itemstrs[idx].c_str());
-    }
+  std::istream_iterator<std::string> begin(ss);
+  std::istream_iterator<std::string> end;
+  std::istream_iterator<std::string> i = begin;
+  std::vector<const char *> itemcstrs;
+  std::vector<std::string> itemstrs;
+  while (i != end) {
+    itemstrs.push_back(*i);
+    ++i;
+  }
 
-    // Send code through a pipe to stdin
-    int codeInPipe[2];
-    pipe2(codeInPipe, O_NONBLOCK);
-    write(codeInPipe[1], (void *) cppCode.data(), cppCode.length());
-    close(codeInPipe[1]); // We need to close the pipe to send an EOF
-    dup2(codeInPipe[0], STDIN_FILENO);
+  for (unsigned idx = 0; idx < itemstrs.size(); idx++) {
+    // note: if itemstrs is modified after this, itemcstrs will be full
+    // of invalid pointers! Could make copies, but would have to clean up
+    // then...
+    itemcstrs.push_back(itemstrs[idx].c_str());
+  }
 
-    itemcstrs.push_back("-"); // Read code from stdin
+  // Send code through a pipe to stdin
+  int codeInPipe[2];
+  pipe2(codeInPipe, O_NONBLOCK);
+  write(codeInPipe[1], (void *)cppCode.data(), cppCode.length());
+  close(codeInPipe[1]); // We need to close the pipe to send an EOF
+  dup2(codeInPipe[0], STDIN_FILENO);
 
-    clang::CompilerInvocation::CreateFromArgs(compilerInvocation, llvm::ArrayRef<const char *>(itemcstrs.data(), itemcstrs.size()), *pDiagnosticsEngine);
+  itemcstrs.push_back("-"); // Read code from stdin
 
-    auto* langOpts = compilerInvocation.getLangOpts();
-    langOpts->CPlusPlus = 1;
-    auto& preprocessorOptions = compilerInvocation.getPreprocessorOpts();
-    auto& targetOptions = compilerInvocation.getTargetOpts();
-    auto& frontEndOptions = compilerInvocation.getFrontendOpts();
+  clang::CompilerInvocation::CreateFromArgs(
+      compilerInvocation,
+      llvm::ArrayRef<const char *>(itemcstrs.data(), itemcstrs.size()),
+      *pDiagnosticsEngine);
+
+  auto *langOpts = compilerInvocation.getLangOpts();
+  langOpts->CPlusPlus = 1;
+  auto &preprocessorOptions = compilerInvocation.getPreprocessorOpts();
+  auto &targetOptions = compilerInvocation.getTargetOpts();
+  auto &frontEndOptions = compilerInvocation.getFrontendOpts();
 #ifdef VERBOSE
-    frontEndOptions.ShowStats = true;
+  frontEndOptions.ShowStats = true;
 #endif
-    auto& headerSearchOptions = compilerInvocation.getHeaderSearchOpts();
+  auto &headerSearchOptions = compilerInvocation.getHeaderSearchOpts();
 #ifdef VERBOSE
-    headerSearchOptions.Verbose = true;
+  headerSearchOptions.Verbose = true;
 #endif
-    auto& codeGenOptions = compilerInvocation.getCodeGenOpts();
+  auto &codeGenOptions = compilerInvocation.getCodeGenOpts();
 
-    targetOptions.Triple = llvm::sys::getDefaultTargetTriple();
-    compilerInstance.createDiagnostics(textDiagPrinter, false);
+  targetOptions.Triple = llvm::sys::getDefaultTargetTriple();
+  compilerInstance.createDiagnostics(textDiagPrinter, false);
 
-    std::unique_ptr<clang::CodeGenAction> action = std::make_unique<clang::EmitLLVMOnlyAction>(&context);
+  std::unique_ptr<clang::CodeGenAction> action =
+      std::make_unique<clang::EmitLLVMOnlyAction>(&context);
 
-    // TODO Turn false status into llvm::Error
-    /*llvm::Error err =*/ compilerInstance.ExecuteAction(*action);
-    /*if (err)
-        return std::move(err);*/
+  // TODO Turn false status into llvm::Error
+  /*llvm::Error err =*/compilerInstance.ExecuteAction(*action);
+  /*if (err)
+      return std::move(err);*/
 
-    // Delete output files to free Compiler Instance
-    compilerInstance.clearOutputFiles(/*EraseFiles=*/false);
+  // Delete output files to free Compiler Instance
+  compilerInstance.clearOutputFiles(/*EraseFiles=*/false);
 
-    return action->takeModule();
+  return action->takeModule();
 }
-

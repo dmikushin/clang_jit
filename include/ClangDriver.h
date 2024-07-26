@@ -1,4 +1,5 @@
 #ifndef CLANG_DRIVER_H
+#define CLANG_DRIVER_H
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -7,15 +8,12 @@
 #include <memory>
 #include <string>
 
-class ClangDriver
-{
-public :
+class ClangDriver {
+public:
+  ClangDriver() = default;
 
-	ClangDriver() = default;
-
-	llvm::Expected<std::unique_ptr<llvm::Module>>
-	compileTranslationUnit(std::string cppCode, llvm::LLVMContext &context);
+  llvm::Expected<std::unique_ptr<llvm::Module>>
+  compileTranslationUnit(std::string cppCode, llvm::LLVMContext &context);
 };
 
 #endif // CLANG_DRIVER_H
-
