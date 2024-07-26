@@ -63,6 +63,7 @@ int *customIntAllocator(unsigned items)
 	return block;
 }
 
+// ExitOnErr handles any errors that occur during this process.
 ExitOnError ExitOnErr;
 
 int main(int argc, char *argv[])
@@ -70,26 +71,45 @@ int main(int argc, char *argv[])
 	// Initialize LLVM.
 	InitLLVM X(argc, argv);
 
+	// Initialize the native target, which is necessary for JIT compilation.
 	InitializeNativeTarget();
+
+	// Initialize the native target's assembly printer,
+	// which is required for generating machine code.
 	InitializeNativeTargetAsmPrinter();
 
 	outs() << "Compiling the following source code in runtime:" << "\n" << sourceCode << "\n";
 
-	// Compile C++ source code to LLVM IR module.
+	// Creates a new LLVM context, which holds the state
+	// for the LLVM intermediate representation (IR).
 	auto C = std::make_unique<LLVMContext>();
+
+	// Compile C++ source code to LLVM IR module.
 	ClangDriver driver;
 	auto M = driver.compileTranslationUnit(sourceCode, *C);
 	if (!M)
 		fatalError(M.takeError());
 
+	// Create an instance of LLJIT using the LLJITBuilder.
 	auto J = ExitOnErr(LLJITBuilder().create());
+
+	// Get the main JIT dynamic library, which will hold the compiled code.
 	JITDylib &JD = J->getMainJITDylib();
+
+	// Add a generator to the JIT dynamic library to resolve symbols from the current process.
+	// Note: in order for the JIT dynamic library to use the symbols from the current process,
+	// those symbols must be present in the dynamic table. If the symbols are defined in the
+	// executable image, they won't be accessible to JIT, because the dynamic table is not
+	// generated for an executable by default. The solution is to link the executable with
+	// --export-dynamic, or set_target_properties(target PROPERTIES ENABLE_EXPORTS ON) for CMake
 	JD.addGenerator(cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(J->getDataLayout().getGlobalPrefix())));
+	
+	// Add the compiled LLVM IR module to the JIT dynamic library.
 	ExitOnErr(J->addIRModule(JD, ThreadSafeModule(std::move(M.get()), std::move(C))));
 
 	// Look up the JIT'd function, cast it to a function pointer, then call it.
 	auto sym = ExitOnErr(J->lookup("integerDistances"));
-	auto integerDistances = reinterpret_cast<integerDistances_t>(sym.getAddress());
+	auto integerDistances = sym.toPtr<integerDistances_t>();
 
 	int x[]{0, 1, 2};
 	int y[]{3, 1, -1};
