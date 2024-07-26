@@ -11,7 +11,7 @@ using namespace llvm;
 using namespace orc;
 
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fatalError(Error E)
+[[noreturn]] static void fatalError(Error E)
 {
 	handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI)
 	{
