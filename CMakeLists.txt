@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
-project(clang_jit VERSION 1.0 LANGUAGES CXX)
+project(clang_jit VERSION 1.0 LANGUAGES C CXX)
 
 if(WIN32)
     set(OS_NAME "Win")
@@ -15,15 +15,21 @@ else()
     message(FATAL_ERROR "Operating system not supported")
 endif()
 
-find_package(LLVM CONFIG REQUIRED PATHS "/usr/lib/llvm-12/lib/cmake" NO_DEFAULT_PATH)
-find_package(Clang CONFIG REQUIRED PATHS "/usr/lib/llvm-12/lib/cmake" NO_DEFAULT_PATH)
+if (TRUE)
+find_package(LLVM CONFIG REQUIRED)
+find_package(Clang CONFIG REQUIRED)
+else()
+# For Ubuntu with multiple versions of LLVM installed
+find_package(LLVM CONFIG REQUIRED PATHS "/usr/lib/llvm-17/lib/cmake" NO_DEFAULT_PATH)
+find_package(Clang CONFIG REQUIRED PATHS "/usr/lib/llvm-17/lib/cmake" NO_DEFAULT_PATH)
+endif()
 
 add_library(${PROJECT_NAME} SHARED
     src/ClangDriver.cpp
     include/ClangDriver.h)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF)
 
@@ -42,9 +48,7 @@ endif()
 separate_arguments(LLVM_DEFINITIONS)
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${LLVM_DEFINITIONS})
 
-target_link_libraries(${PROJECT_NAME} ${LLVM_LIBRARIES} clangTooling clangToolingCore clangDriver clangFrontend
-    clangFrontendTool clangParse clangSema clangEdit clangLex clangAnalysis clangRewrite clangRewriteFrontend
-    clangSerialization clangAST clangASTMatchers clangDynamicASTMatchers clangBasic clangIndex)
+target_link_libraries(${PROJECT_NAME} libclang clang-cpp LLVM)
 
 add_executable(test_${PROJECT_NAME}_1 src/test/test_${PROJECT_NAME}_1.cpp)
 target_compile_definitions(test_${PROJECT_NAME}_1 PRIVATE ${LLVM_DEFINITIONS})
