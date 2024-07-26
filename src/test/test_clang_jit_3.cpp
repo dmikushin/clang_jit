@@ -1,54 +1,104 @@
 #include "ClangDriver.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include <llvm/Support/Host.h>
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Support/Error.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+
+#include <llvm-c/TargetMachine.h>
+#include <llvm-c/Transforms/PassBuilder.h>
+#include <llvm/Support/CBindingWrapping.h>
 
 using namespace llvm;
 using namespace orc;
 
-// A function object that creates a simple pass pipeline to apply to each
+// A class that creates a simple optimization pass pipeline to apply to each
 // module as it passes through the IRTransformLayer.
 class SimpleOptimizer
 {
-	llvm::PassManagerBuilder B;
+	std::string opt_str;
+    bool internalize_symbols;
+
+    LLVMTargetMachineRef tm;
+    LLVMPassBuilderOptionsRef opts;
   
 public :
 
-	SimpleOptimizer(unsigned OptLevel = 3) { B.OptLevel = OptLevel; }
+	SimpleOptimizer(unsigned optimization_level = 3, bool internalize_symbols_ = false) :
+		internalize_symbols(internalize_symbols_)
+	{
+		LLVMCodeGenOptLevel level;
+		switch (optimization_level)
+		{
+		case 0:
+		default:
+			opt_str = "default<O0>";
+			level = LLVMCodeGenLevelNone;
+			break;
+		case 1:
+			opt_str = "default<O1>";
+			level = LLVMCodeGenLevelLess;
+			break;
+		case 2:
+			opt_str = "default<O2>";
+			level = LLVMCodeGenLevelDefault;
+			break;
+		case 3:
+			opt_str = "default<O3>";
+			level = LLVMCodeGenLevelAggressive;
+			break;
+		}
+
+		std::string targetTriple = llvm::sys::getDefaultTargetTriple();
+
+		LLVMTargetRef targ;
+		char *err_message;
+		LLVMGetTargetFromTriple(targetTriple.c_str(), &targ, &err_message);
+
+		std::string targetCPU = ""; //llvm::sys::getHostCPUName().str();
+		tm = LLVMCreateTargetMachine(targ, targetTriple.c_str(),
+			targetCPU.c_str(), "", level,
+			LLVMRelocDefault, LLVMCodeModelDefault);
+		if (!tm)
+			exit(EXIT_FAILURE);
+
+		opts = LLVMCreatePassBuilderOptions();
+	}
+
+	~SimpleOptimizer()
+	{
+		//LLVMDisposeTargetMachine(tm);
+		//LLVMDisposePassBuilderOptions(opts);
+	}
 
 	Expected<ThreadSafeModule> operator()(ThreadSafeModule TSM, MaterializationResponsibility &R)
 	{
-		TSM.withModuleDo([this](Module &M)
+		if (tm)
 		{
-			dbgs() << "--- BEFORE OPTIMIZATION ---\n" << M << "\n";
-    
-			legacy::FunctionPassManager FPM(&M);
-			B.populateFunctionPassManager(FPM);
+			TSM.withModuleDo([this](Module &M)
+			{
+				dbgs() << "--- BEFORE OPTIMIZATION ---\n" << M << "\n";
 
-			FPM.doInitialization();
-			for (Function &F : M)
-				FPM.run(F);
-			FPM.doFinalization();
+				// TODO Do module internalization: marking functions as internal
+				// enables the optimizer to perform optimizations such as
+				// function inlining and global dead-code elimination.
 
-			legacy::PassManager MPM;
-			B.populateModulePassManager(MPM);
-			MPM.run(M);    
-
-			dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
-		});
+				// Run the prepared optimization passes.
+				LLVMRunPasses(wrap(&M), opt_str.c_str(), tm, opts);
+		
+				dbgs() << "--- AFTER OPTIMIZATION ---\n" << M << "\n";
+			});
+		}
 
 		return std::move(TSM);
 	}
 };
 
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fatalError(Error E)
+[[noreturn]] static void fatalError(Error E)
 {
 	handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI)
 	{
@@ -130,7 +180,7 @@ int main(int argc, char *argv[])
 
 	// Look up the JIT'd function, cast it to a function pointer, then call it.
 	auto sym = ExitOnErr(J->lookup("integerDistances"));
-	auto integerDistances = reinterpret_cast<integerDistances_t>(sym.getAddress());
+	auto integerDistances = sym.toPtr<integerDistances_t>();
 
 	int x[]{0, 1, 2};
 	int y[]{3, 1, -1};
