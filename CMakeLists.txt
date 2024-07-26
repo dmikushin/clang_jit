@@ -56,9 +56,16 @@ target_link_libraries(test_${PROJECT_NAME}_1 ${PROJECT_NAME})
 
 add_executable(test_${PROJECT_NAME}_2 src/test/test_${PROJECT_NAME}_2.cpp)
 target_compile_definitions(test_${PROJECT_NAME}_2 PRIVATE ${LLVM_DEFINITIONS})
+# Note: in order for the JIT dynamic library to use the symbols from the current process,
+# those symbols must be present in the dynamic table. If the symbols are defined in the
+# executable image, they won't be accessible to JIT, because the dynamic table is not
+# generated for an executable by default. The solution is to link the executable with
+# --export-dynamic, or set_target_properties(target PROPERTIES ENABLE_EXPORTS ON) for CMake
+set_target_properties(test_${PROJECT_NAME}_2 PROPERTIES ENABLE_EXPORTS ON)
 target_link_libraries(test_${PROJECT_NAME}_2 ${PROJECT_NAME})
 
 add_executable(test_${PROJECT_NAME}_3 src/test/test_${PROJECT_NAME}_3.cpp)
 target_compile_definitions(test_${PROJECT_NAME}_3 PRIVATE ${LLVM_DEFINITIONS})
+set_target_properties(test_${PROJECT_NAME}_3 PROPERTIES ENABLE_EXPORTS ON)
 target_link_libraries(test_${PROJECT_NAME}_3 ${PROJECT_NAME})
 
